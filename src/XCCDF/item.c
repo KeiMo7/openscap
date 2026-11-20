@@ -39,6 +39,7 @@
 #include "item.h"
 #include "helpers.h"
 #include "xccdf_impl.h"
+#include "identity_priv.h"
 #include "common/util.h"
 #include "common/oscap_pcre.h"
 #include "oscap_helpers.h"
@@ -1344,6 +1345,7 @@ void xccdf_result_item_clone(struct xccdf_result_item *clone, const struct xccdf
 	clone->setvalues = oscap_list_clone(item->setvalues, (oscap_clone_func) xccdf_setvalue_clone);
 	clone->rule_results = oscap_list_clone(item->rule_results, (oscap_clone_func) xccdf_rule_result_clone);
 	clone->scores = oscap_list_clone(item->scores, (oscap_clone_func) xccdf_score_clone);
+	clone->cid_identity = cid_identity_clone(item->cid_identity);
 }
 
 void xccdf_reparent_list(struct oscap_list * item_list, struct xccdf_item * parent)

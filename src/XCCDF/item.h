@@ -33,6 +33,8 @@
 #include "common/util.h"
 #include "common/text_priv.h"
 
+struct cid_identity;
+
 
 struct xccdf_flags {
 	bool selected:1;
@@ -157,6 +159,9 @@ struct xccdf_result_item {
 	struct oscap_list *setvalues;
 	struct oscap_list *rule_results;
 	struct oscap_list *scores;
+
+	/* Content-derived identity (cid namespace), NULL on legacy artifacts. */
+	struct cid_identity *cid_identity;
 };
 
 struct xccdf_profile_item {

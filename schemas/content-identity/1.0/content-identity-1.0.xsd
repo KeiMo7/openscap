@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Content identity extension for XCCDF 1.2 TestResult documents.
+
+  These elements are embedded inside an xccdf:metadata element, whose
+  metadataType permits any element from a foreign namespace with
+  processContents="lax".  This schema documents the contract and can be
+  used for explicit validation; the core XCCDF schema does not require it.
+
+  All digests are lowercase hex SHA-256 over XML C14N 1.0 canonical bytes
+  (whitespace-only text nodes and comments removed).  Neither author
+  version strings nor timestamps are part of an identity.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:cid="https://open-scap.org/ns/content-identity/1.0"
+            targetNamespace="https://open-scap.org/ns/content-identity/1.0"
+            elementFormDefault="qualified">
+
+  <xsd:simpleType name="sha256-digest-type">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="[0-9a-f]{64}"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="component-type">
+    <xsd:attribute name="origin" type="xsd:string" use="required"/>
+    <xsd:attribute name="content-type" use="required">
+      <xsd:simpleType>
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="xccdf"/>
+          <xsd:enumeration value="oval"/>
+          <xsd:enumeration value="cpe"/>
+          <xsd:enumeration value="tailoring"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:attribute>
+    <xsd:attribute name="digest" type="cid:sha256-digest-type" use="required"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="tailoring-entry-type">
+    <xsd:attribute name="kind" use="required">
+      <xsd:simpleType>
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="select"/>
+          <xsd:enumeration value="set-value"/>
+          <xsd:enumeration value="refine-rule"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:attribute>
+    <xsd:attribute name="idref" type="xsd:string" use="required"/>
+    <xsd:attribute name="value" type="xsd:string"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="tailoring-type">
+    <xsd:sequence>
+      <xsd:element name="tailoring-entry" type="cid:tailoring-entry-type"
+                   minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="origin" type="xsd:string"/>
+    <xsd:attribute name="digest" type="cid:sha256-digest-type"/>
+    <xsd:attribute name="profile-id" type="xsd:string" use="required"/>
+    <xsd:attribute name="benchmark-digest" type="cid:sha256-digest-type"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="rule-type">
+    <xsd:attribute name="id" type="xsd:string" use="required"/>
+    <xsd:attribute name="cluster-id" type="xsd:string"/>
+    <xsd:attribute name="stable-key" type="xsd:string" use="required"/>
+    <xsd:attribute name="key-basis" use="required">
+      <xsd:simpleType>
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="cluster"/>
+          <xsd:enumeration value="check-ref"/>
+          <xsd:enumeration value="id"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+    </xsd:attribute>
+    <xsd:attribute name="group-path" type="xsd:string"/>
+    <xsd:attribute name="body-digest" type="cid:sha256-digest-type"/>
+    <xsd:attribute name="logic-digest" type="cid:sha256-digest-type"/>
+    <xsd:attribute name="author-version" type="xsd:string"/>
+    <xsd:attribute name="check-refs" type="xsd:string"/>
+    <xsd:attribute name="selected" type="xsd:boolean" use="required"/>
+    <xsd:attribute name="customized" type="xsd:boolean" use="required"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="content-identity-type">
+    <xsd:sequence>
+      <xsd:element name="component" type="cid:component-type"
+                   minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="tailoring" type="cid:tailoring-type" minOccurs="0"/>
+      <xsd:element name="rules" minOccurs="0">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="rule" type="cid:rule-type"
+                         minOccurs="0" maxOccurs="unbounded"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:sequence>
+    <xsd:attribute name="algorithm" type="xsd:string" use="required"/>
+    <xsd:attribute name="canonicalization" type="xsd:string" use="required"/>
+  </xsd:complexType>
+
+  <xsd:element name="content-identity" type="cid:content-identity-type"/>
+
+  <!-- Identity diff report, output of oscap xccdf diff with the report option -->
+  <xsd:complexType name="rule-entry-type">
+    <xsd:sequence>
+      <xsd:element name="old" minOccurs="0">
+        <xsd:complexType>
+          <xsd:attribute name="id" type="xsd:string"/>
+          <xsd:attribute name="result" type="xsd:string"/>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="new" minOccurs="0">
+        <xsd:complexType>
+          <xsd:attribute name="id" type="xsd:string"/>
+          <xsd:attribute name="result" type="xsd:string"/>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="reason" type="xsd:string" minOccurs="0"/>
+    </xsd:sequence>
+    <xsd:attribute name="category" type="xsd:string" use="required"/>
+    <xsd:attribute name="side" type="xsd:string" use="required"/>
+    <xsd:attribute name="stable-key" type="xsd:string" use="required"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="identity-diff-type">
+    <xsd:sequence>
+      <xsd:element name="status-message" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="rule-entry" type="cid:rule-entry-type"
+                   minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="status" type="xsd:string" use="required"/>
+    <xsd:attribute name="missing-identity" type="xsd:boolean" use="required"/>
+  </xsd:complexType>
+
+  <xsd:element name="identity-diff" type="cid:identity-diff-type"/>
+</xsd:schema>

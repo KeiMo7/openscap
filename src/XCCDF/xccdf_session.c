@@ -52,6 +52,8 @@
 #include "source/xslt_priv.h"
 #include "source/signature_priv.h"
 #include "XCCDF/xccdf_impl.h"
+#include "XCCDF/helpers.h"
+#include "XCCDF/identity_priv.h"
 #include "XCCDF_POLICY/public/xccdf_policy.h"
 #include "XCCDF_POLICY/xccdf_policy_priv.h"
 #include "XCCDF_POLICY/xccdf_policy_model_priv.h"
@@ -1423,6 +1425,16 @@ int xccdf_session_evaluate(struct xccdf_session *session)
 			session->xccdf.base_score = xccdf_score_get_score(score);
 	}
 	xccdf_model_iterator_free(model_it);
+
+	/*
+	 * Build the content-derived identity from the actually loaded
+	 * content and attach it to the TestResult.  A failure here must not
+	 * invalidate an otherwise successful evaluation; the artifact is
+	 * simply emitted without the identity block.
+	 */
+	struct cid_identity *cid = cid_identity_build_for_session(session);
+	if (cid != NULL)
+		XITEM(session->xccdf.result)->sub.result.cid_identity = cid;
 	return 0;
 }
 
@@ -2080,4 +2092,90 @@ void xccdf_session_set_reference_filter(struct xccdf_session *session, const cha
 void xccdf_session_set_show_rule_details(struct xccdf_session *session, bool show_rule_details)
 {
 	session->show_rule_details = show_rule_details;
+}
+
+struct oscap_source *cid_session_get_xccdf_source(const struct xccdf_session *session)
+{
+	return session->xccdf.source;
+}
+
+struct oscap_source *cid_session_get_tailoring_source(const struct xccdf_session *session)
+{
+	if (session->tailoring.user_file != NULL)
+		return session->tailoring.user_file;
+	if (session->tailoring.user_component_id != NULL && xccdf_session_is_sds(session)) {
+		return ds_sds_session_select_tailoring(
+			xccdf_session_get_ds_sds_session((struct xccdf_session *) session),
+			session->tailoring.user_component_id);
+	}
+	return NULL;
+}
+
+struct oscap_source **cid_session_get_oval_sources(const struct xccdf_session *session, size_t *count)
+{
+	struct oval_content_resource **resources = session->oval.custom_resources != NULL
+		? session->oval.custom_resources : session->oval.resources;
+	if (resources == NULL) {
+		*count = 0;
+		return NULL;
+	}
+	size_t n = 0;
+	while (resources[n] != NULL)
+		++n;
+	*count = n;
+	if (n == 0)
+		return NULL;
+
+	struct oscap_source **out = malloc(n * sizeof(struct oscap_source *));
+	if (out == NULL) {
+		*count = 0;
+		return NULL;
+	}
+	for (size_t i = 0; i < n; ++i)
+		out[i] = resources[i]->source;
+	return out;
+}
+
+struct oscap_source **cid_session_get_cpe_sources(const struct xccdf_session *session, size_t *count)
+{
+	*count = 0;
+	if (session->xccdf.policy_model == NULL)
+		return NULL;
+	struct cpe_session *cpe = xccdf_policy_model_get_cpe_session(session->xccdf.policy_model);
+	if (cpe == NULL || cpe->sources_cache == NULL)
+		return NULL;
+
+	size_t capacity = 8;
+	size_t n = 0;
+	struct oscap_source **out = malloc(capacity * sizeof(struct oscap_source *));
+	if (out == NULL)
+		return NULL;
+
+	struct oscap_htable_iterator *hit = oscap_htable_iterator_new(cpe->sources_cache);
+	while (oscap_htable_iterator_has_more(hit)) {
+		const struct oscap_htable_item *item = oscap_htable_iterator_next(hit);
+		struct oscap_source *source = (struct oscap_source *) item->value;
+		if (source == NULL)
+			continue;
+		if (n == capacity) {
+			capacity *= 2;
+			struct oscap_source **grown = realloc(out, capacity * sizeof(struct oscap_source *));
+			if (grown == NULL) {
+				free(out);
+				oscap_htable_iterator_free(hit);
+				*count = 0;
+				return NULL;
+			}
+			out = grown;
+		}
+		out[n++] = source;
+	}
+	oscap_htable_iterator_free(hit);
+
+	if (n == 0) {
+		free(out);
+		return NULL;
+	}
+	*count = n;
+	return out;
 }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5"
+                  xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5"
+                  xmlns:ind="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent">
+  <generator>
+    <oval:product_name>OpenSCAP identity test</oval:product_name>
+    <oval:schema_version>5.10.1</oval:schema_version>
+    <oval:timestamp>2026-01-01T00:00:00</oval:timestamp>
+  </generator>
+  <definitions>
+    <definition id="oval:org.test:def:2" version="1" class="compliance">
+      <metadata><title>t</title><description>d</description></metadata>
+      <criteria><criterion test_ref="oval:org.test:tst:1" comment="c"/></criteria>
+    </definition>
+  </definitions>
+  <tests>
+    <ind:variable_test id="oval:org.test:tst:1" version="1" check="all"
+                       check_existence="none_exist" comment="c">
+      <ind:object object_ref="oval:org.test:obj:1"/>
+    </ind:variable_test>
+  </tests>
+  <objects>
+    <ind:variable_object id="oval:org.test:obj:1" version="1">
+      <ind:var_ref>oval:org.test:var:1</ind:var_ref>
+    </ind:variable_object>
+  </objects>
+  <variables>
+    <constant_variable id="oval:org.test:var:1" version="1" datatype="string" comment="c">
+      <value>present</value>
+    </constant_variable>
+  </variables>
+</oval_definitions>

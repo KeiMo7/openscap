@@ -38,6 +38,7 @@
 #include <xccdf_benchmark.h>
 #include <xccdf_policy.h>
 #include <xccdf_session.h>
+#include <xccdf_identity_diff.h>
 #include <ds_rds_session.h>
 
 #include <sys/types.h>
@@ -75,13 +76,14 @@ static int app_xccdf_validate(const struct oscap_action *action);
 static int app_xccdf_resolve(const struct oscap_action *action);
 static int app_xccdf_export_oval_variables(const struct oscap_action *action);
 static int app_xccdf_remediate(const struct oscap_action *action);
+static int app_xccdf_diff(const struct oscap_action *action);
 static bool getopt_xccdf(int argc, char **argv, struct oscap_action *action);
 static bool getopt_generate(int argc, char **argv, struct oscap_action *action);
 static int app_xccdf_xslt(const struct oscap_action *action);
 static int app_generate_fix(const struct oscap_action *action);
 static int app_generate_guide(const struct oscap_action *action);
 
-#define XCCDF_SUBMODULES_NUM		7
+#define XCCDF_SUBMODULES_NUM		8
 #define XCCDF_GEN_SUBMODULES_NUM	5 /* See actual arrays
 						initialization below. */
 static struct oscap_module* XCCDF_SUBMODULES[XCCDF_SUBMODULES_NUM];
@@ -235,6 +237,23 @@ static struct oscap_module XCCDF_REMEDIATE = {
 	.func = app_xccdf_remediate
 };
 
+static struct oscap_module XCCDF_DIFF = {
+	.name = "diff",
+	.parent = &OSCAP_XCCDF_MODULE,
+	.summary = "Offline attribution of differences between two XCCDF result artifacts",
+	.usage = "[options] OLD_RESULT NEW_RESULT",
+	.help =
+		"OLD_RESULT / NEW_RESULT - XCCDF TestResult files or ARF result datastreams\n\n"
+		"Compares two scan artifacts using only their embedded content identities;\n"
+		"no target is rescanned and no network access is performed.\n\n"
+		"Options:\n"
+		"   --report <file>              - Write the comparison as an XML report (cid namespace).\n"
+		"   --verbose <verbosity_level>  - Turn on verbose mode (DEVEL, INFO, WARNING, ERROR).\n"
+		"   --verbose-log-file <file>    - Write verbose information into file.\n",
+	.opt_parser = getopt_xccdf,
+	.func = app_xccdf_diff
+};
+
 #define GEN_OPTS \
         "Generate options:\n" \
 	"   --profile <profile-id>        - Apply profile with given ID to the Benchmark before further processing takes place.\n"
@@ -358,6 +377,7 @@ static struct oscap_module* XCCDF_SUBMODULES[XCCDF_SUBMODULES_NUM] = {
     &XCCDF_EXPORT_OVAL_VARIABLES,
     &XCCDF_GENERATE,
 	&XCCDF_REMEDIATE,
+	&XCCDF_DIFF,
     NULL
 };
 
@@ -1438,7 +1458,16 @@ bool getopt_xccdf(int argc, char **argv, struct oscap_action *action)
 		}
 	}
 
-	if (action->module == &XCCDF_EVAL) {
+	if (action->module == &XCCDF_DIFF) {
+		if (optind + 1 >= argc)
+			return oscap_module_usage(action->module, stderr, "Both OLD_RESULT and NEW_RESULT must be specified!");
+		action->f_xccdf = argv[optind];
+		action->f_ovals = malloc(2 * sizeof(char *));
+		if (action->f_ovals == NULL)
+			return false;
+		action->f_ovals[0] = argv[optind + 1];
+		action->f_ovals[1] = NULL;
+	} else if (action->module == &XCCDF_EVAL) {
 		/* We should have XCCDF file here */
 		if (optind >= argc) {
 			/* TODO */
@@ -1500,4 +1529,54 @@ int app_xccdf_validate(const struct oscap_action *action) {
 	oscap_print_error();
 
 	return result;
+}
+
+int app_xccdf_diff(const struct oscap_action *action) {
+	if (action->f_xccdf == NULL || action->f_ovals == NULL || action->f_ovals[0] == NULL) {
+		fprintf(stderr, "Both OLD_RESULT and NEW_RESULT must be specified.\n");
+		return OSCAP_ERROR;
+	}
+
+	struct cid_diff_result *diff = xccdf_identity_diff_files(action->f_xccdf, action->f_ovals[0]);
+	if (diff == NULL) {
+		oscap_print_error();
+		return OSCAP_ERROR;
+	}
+
+	cid_diff_status_t status = cid_diff_result_get_status(diff);
+	if (status != CID_DIFF_STATUS_OK) {
+		fprintf(stderr, "%s\n", cid_diff_result_get_status_message(diff));
+	}
+
+	if (action->f_report != NULL) {
+		char *xml = cid_diff_result_render_xml(diff);
+		FILE *fp = fopen(action->f_report, "w");
+		if (fp == NULL) {
+			fprintf(stderr, "Cannot open report file '%s': %s\n",
+				action->f_report, strerror(errno));
+			free(xml);
+			cid_diff_result_free(diff);
+			return OSCAP_ERROR;
+		}
+		fputs(xml, fp);
+		fclose(fp);
+		free(xml);
+	}
+
+	char *text = cid_diff_result_render_text(diff);
+	if (text != NULL) {
+		fputs(text, stdout);
+		free(text);
+	}
+
+	cid_diff_result_free(diff);
+
+	/* Exit code reflects the gate that fired; 0 means a comparable, fully
+	 * attributable comparison.  Result differences themselves stay exit 0. */
+	switch (status) {
+	case CID_DIFF_STATUS_TARGET_INCOMPARABLE: return 2;
+	case CID_DIFF_STATUS_TAILORING_MISMATCH: return 3;
+	case CID_DIFF_STATUS_ERROR: return OSCAP_ERROR;
+	default: return OSCAP_OK;
+	}
 }

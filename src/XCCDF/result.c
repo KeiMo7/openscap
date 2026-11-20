@@ -83,6 +83,7 @@
 #include "item.h"
 #include "helpers.h"
 #include "xccdf_impl.h"
+#include "identity_priv.h"
 #include "common/_error.h"
 #include "oscap_text.h"
 #include "common/debug_priv.h"
@@ -159,6 +160,8 @@ static inline void xccdf_result_free_impl(struct xccdf_item *result)
 		oscap_list_free(result->sub.result.setvalues, (oscap_destruct_func) xccdf_setvalue_free);
 		oscap_list_free(result->sub.result.rule_results, (oscap_destruct_func) xccdf_rule_result_free);
 		oscap_list_free(result->sub.result.organizations, free);
+
+		cid_identity_free(result->sub.result.cid_identity);
 
 		xccdf_item_release(result);
 	}
@@ -1104,6 +1107,19 @@ struct xccdf_result *xccdf_result_new_parse(xmlTextReaderPtr reader)
 			if (res->sub.result.benchmark_uri == NULL)
 				res->sub.result.benchmark_uri = xccdf_attribute_copy(reader, XCCDFA_HREF);
 			break;
+		case XCCDFE_METADATA:
+			/*
+			 * Do not funnel TestResult metadata through the generic item
+			 * metadata list: that list is re-emitted before the type
+			 * specific children, which would violate the TestResult
+			 * sequence (metadata must follow score).  The content
+			 * identity block is recovered independently from the DOM;
+			 * any other metadata is intentionally dropped on re-export.
+			 */
+			xmlTextReaderRead(reader);
+			while (oscap_to_start_element(reader, depth + 1))
+				xmlTextReaderRead(reader);
+			break;
 		default:
 			if (!xccdf_item_process_element(res, reader))
 				dW("Encountered an unknown element '%s' while parsing XCCDF result.",
@@ -1114,6 +1130,14 @@ struct xccdf_result *xccdf_result_new_parse(xmlTextReaderPtr reader)
 		}
 		xmlTextReaderRead(reader);
 	}
+
+	/*
+	 * Round-trip the content-identity block (foreign namespace, ignored
+	 * by the generic parser).  Legacy artifacts simply have none.
+	 */
+	xmlDocPtr parse_doc = xmlTextReaderCurrentDoc(reader);
+	if (parse_doc != NULL)
+		res->sub.result.cid_identity = cid_identity_parse_from_doc(parse_doc);
 
 	return XRESULT(res);
 
@@ -1403,6 +1427,17 @@ void xccdf_result_to_dom(struct xccdf_result *result, xmlNode *result_node, xmlD
         free(max_str);
 	}
 	xccdf_score_iterator_free(scores);
+
+	/*
+	 * Content-derived identity.  The xccdf:metadata extension slot is
+	 * available in XCCDF 1.2 only and must follow the score elements in
+	 * the TestResult sequence.  Everything lives in a foreign namespace,
+	 * so legacy tools ignore it.
+	 */
+	struct cid_identity *cid = XITEM(result)->sub.result.cid_identity;
+	if (cid != NULL && xccdf_version_cmp(version_info, "1.2") >= 0) {
+		cid_identity_attach_dom(cid, result_node, doc);
+	}
 }
 
 static struct xccdf_identity *xccdf_identity_new_parse(xmlTextReaderPtr reader)

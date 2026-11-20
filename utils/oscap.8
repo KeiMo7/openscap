@@ -317,6 +317,16 @@ Switch to sparse but a bit more saturated output also suitable for progress repo
 .RE
 .RE
 .TP
+.B diff\fR [\fIoptions\fR] OLD_RESULT NEW_RESULT
+.RS
+Offline comparison of two scan result artifacts (standalone XCCDF TestResult files or ARF result datastreams). It uses only the content-derived identities embedded in the artifacts; it never rescans a target and never accesses the network. For every rule matched by its stable identity it reports the attribution category (added, disappeared, renamed, moved, result-flip, version-label-only, content-changed, unknown) and the responsible side (target-side, content-side, tailoring-introduced, unknown). Exit code is 0 for a fully attributable comparison, 2 when the two targets are not comparable, and 3 when a tailoring/content version mismatch is detected.
+.TP
+\fB\-\-report FILE\fR
+.RS
+Write the comparison as an XML report (content-identity namespace) in addition to the plain text output on standard output.
+.RE
+.RE
+.TP
 .B resolve\fR -o output-file xccdf-file
 .RS
 Resolve an XCCDF file as described in the XCCDF specification. It will flatten inheritance hierarchy of XCCDF profiles, groups, rules, and values. Result is another XCCDF document, which will be written to \fIoutput-file\fR.

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_org.test_benchmark_id">
+  <status>accepted</status>
+  <title>Identity test benchmark</title>
+  <version>1.0</version>
+  <Rule id="xccdf_org.test_rule_a" selected="true">
+    <version>1.0</version>
+    <title>Rule A title</title>
+    <description>Rule A description</description>
+    <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+      <check-content-ref href="content.oval.xml" name="oval:org.test:def:1"/>
+    </check>
+  </Rule>
+</Benchmark>
