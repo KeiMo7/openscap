@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_com.example_benchmark_test">
+  <status>incomplete</status>
+  <version>1.0</version>
+  <Rule selected="true" id="xccdf_com.example_rule_one">
+    <title>Rule one</title>
+  </Rule>
+  <TestResult id="xccdf_org.open-scap_testresult_multi_alpha" start-time="2026-11-19T20:00:00+00:00" end-time="2026-11-19T20:05:00+00:00">
+    <target>alpha.example.com</target>
+    <target-facts>
+      <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">alpha</fact>
+    </target-facts>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T20:01:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+  </TestResult>
+  <TestResult id="xccdf_org.open-scap_testresult_multi_beta" start-time="2026-11-19T20:00:00+00:00" end-time="2026-11-19T20:05:00+00:00">
+    <target>beta.example.com</target>
+    <target-facts>
+      <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">beta</fact>
+    </target-facts>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T20:01:00+00:00" weight="1.0" severity="high"><result>fail</result></rule-result>
+  </TestResult>
+  <TestResult id="xccdf_org.open-scap_testresult_multi_gamma" start-time="2026-11-19T20:00:00+00:00" end-time="2026-11-19T20:05:00+00:00">
+    <target>gamma.example.com</target>
+    <target-facts>
+      <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">gamma</fact>
+    </target-facts>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T20:01:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+  </TestResult>
+</Benchmark>

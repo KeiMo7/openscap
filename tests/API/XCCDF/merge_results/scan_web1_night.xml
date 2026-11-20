@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_com.example_benchmark_test">
+  <status>incomplete</status>
+  <version>1.0</version>
+  <Rule selected="true" id="xccdf_com.example_rule_one">
+    <title>Rule one</title>
+    <check system="urn:xccdf:check:manual"><check-import import-name="x">x</check-import></check>
+  </Rule>
+  <Rule selected="true" id="xccdf_com.example_rule_two">
+    <title>Rule two</title>
+    <check system="urn:xccdf:check:manual"><check-import import-name="x">x</check-import></check>
+  </Rule>
+  <TestResult id="xccdf_org.open-scap_testresult_web1" start-time="2026-11-19T22:00:00+00:00" end-time="2026-11-19T22:05:00+00:00" test-system="cpe:/a:open-scap:oscap:1.4.7">
+    <target>web1.example.com</target>
+    <target-address>10.0.0.1</target-address>
+    <target-facts>
+      <fact name="urn:xccdf:fact:asset:identifier:fqdn" type="string">web1.example.com</fact>
+      <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">web1</fact>
+      <fact name="urn:xccdf:fact:ethernet:MAC" type="string">AA:BB:CC:DD:EE:01</fact>
+      <fact name="urn:xccdf:fact:scanner:name" type="string">OpenSCAP</fact>
+      <fact name="urn:xccdf:fact:scanner:version" type="string">1.4.7</fact>
+    </target-facts>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T22:01:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+    <rule-result idref="xccdf_com.example_rule_two" time="2026-11-19T22:02:00+00:00" weight="1.0" severity="high"><result>fail</result></rule-result>
+    <score system="urn:xccdf:scoring:default" maximum="100">50.0</score>
+  </TestResult>
+</Benchmark>

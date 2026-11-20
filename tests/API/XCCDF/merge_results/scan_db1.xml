@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_com.example_benchmark_test">
+  <status>incomplete</status>
+  <version>1.0</version>
+  <TestResult id="xccdf_org.open-scap_testresult_db1" start-time="2026-11-19T23:00:00+00:00" end-time="2026-11-19T23:05:00+00:00" test-system="cpe:/a:open-scap:oscap:1.4.7">
+    <target>db1</target>
+    <target-address>10.0.0.2</target-address>
+    <target-facts>
+      <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">db1</fact>
+      <fact name="urn:xccdf:fact:asset:identifier:mac" type="string">AA:BB:CC:DD:EE:02</fact>
+      <fact name="urn:xccdf:fact:scanner:version" type="string">1.4.7</fact>
+    </target-facts>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T23:01:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+    <score system="urn:xccdf:scoring:default" maximum="100">100.0</score>
+  </TestResult>
+</Benchmark>

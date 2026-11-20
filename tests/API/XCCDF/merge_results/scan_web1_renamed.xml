@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestResult xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_org.open-scap_testresult_web1_renamed" start-time="2026-11-20T08:00:00+00:00" end-time="2026-11-20T08:05:00+00:00">
+  <target>web1</target>
+  <target-facts>
+    <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">web1</fact>
+    <fact name="urn:xccdf:fact:ethernet:MAC" type="string">AA:BB:CC:DD:EE:01</fact>
+  </target-facts>
+  <rule-result idref="xccdf_com.example_rule_one" time="2026-11-20T08:01:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+</TestResult>

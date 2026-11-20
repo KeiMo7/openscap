@@ -160,6 +160,8 @@ struct oscap_action {
 	char *fix_type;
 	char *local_files;
 	char *reference;
+	char **merge_inputs;
+	int merge_input_count;
 	int references;
 	int raw;
 	int show_rule_details;

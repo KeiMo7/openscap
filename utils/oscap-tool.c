@@ -67,6 +67,7 @@ static void oscap_action_release(struct oscap_action *action)
 {
 	assert(action != NULL);
 	free(action->f_ovals);
+	free(action->merge_inputs);
     oscap_stringlist_free(action->rules);
     oscap_stringlist_free(action->skip_rules);
 }

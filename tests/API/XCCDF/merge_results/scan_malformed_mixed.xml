@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_com.example_benchmark_test">
+  <status>incomplete</status>
+  <version>1.0</version>
+  <TestResult id="xccdf_org.open-scap_testresult_broken">
+    <target>broken</target>
+    <rule-result idref="xccdf_com.example_rule_one" weight="1.0"><result>pass</result></rule-result>
+  </TestResult>
+  <TestResult id="xccdf_org.open-scap_testresult_good" end-time="2026-11-19T11:00:00+00:00">
+    <target>goodhost.example.com</target>
+    <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T11:00:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+  </TestResult>
+</Benchmark>

@@ -241,6 +241,32 @@ Show rule description and rationale when reporting results.
 .RE
 .RE
 .TP
+.B merge-results\fR [\fIoptions\fR] INPUT_FILE [\fIINPUT_FILE\fR ...]
+.RS
+Merge XCCDF TestResults collected from multiple hosts, multiple scans or both into a single XCCDF Benchmark with one TestResult per resolved host. Inputs may be XCCDF TestResult files, XCCDF Benchmarks that embed TestResults and ARF result data streams; every TestResult present in an input is read.
+.PP
+Host identity is resolved in the following order of priority: a stable machine identifier (for example urn:xccdf:fact:asset:identifier:ein), then the host name (a short name and its fully qualified form are recognized as the same host), then a network address as the last resort. Addresses are treated as a mutable attribution clue and are never used to merge records that carry a stronger identity. When the identity is completely missing the record is placed in a separate "Unknown host" bucket and is never merged with a named host.
+.PP
+Merging is deterministic: the output does not depend on the order of input files or on how the batch is split, and the merged document can be imported again and re-merged with the same result. The original input files are never modified. When a rule was reported with different conclusions over time, the latest conclusion is the visible one and the full time series is preserved in the rule-result history. Duplicate reports of the same rule in one batch are deduplicated.
+.PP
+The resolved identity of every merged host is recorded in the merged document as target facts urn:xccdf:fact:asset:identifier:host_id and urn:xccdf:fact:asset:identifier:host_id_source. Per-scan metadata is recorded in urn:openscap:fact:host:scan facts.
+.TP
+\fB\-\-output FILE\fR
+.RS
+Write the merged document into FILE. This option is required.
+.RE
+.TP
+\fB\-\-verbose VERBOSITY_LEVEL\fR
+.RS
+Turn on verbose mode at specified verbosity level. VERBOSITY_LEVEL is one of: DEVEL, INFO, WARNING, ERROR.
+.RE
+.TP
+\fB\-\-verbose-log-file FILE\fR
+.RS
+Set filename to write additional information.
+.RE
+.RE
+.TP
 .B remediate\fR [\fIoptions\fR] INPUT_FILE [\fIoval-definitions-files\fR]
 .RS
 This module provides post-scan remediation. It assumes that the INPUT_FILE is result of `oscap xccdf eval` operation. The input file must contain TestResult element. This module executes XCCDF fix elements for failed rule-result contained in the given TestResult. Use of this option is always at your own risk and it shall be avoided unless for trusted content.

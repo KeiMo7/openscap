@@ -38,6 +38,7 @@
 #include <xccdf_benchmark.h>
 #include <xccdf_policy.h>
 #include <xccdf_session.h>
+#include <xccdf_result_merge.h>
 #include <ds_rds_session.h>
 
 #include <sys/types.h>
@@ -80,8 +81,9 @@ static bool getopt_generate(int argc, char **argv, struct oscap_action *action);
 static int app_xccdf_xslt(const struct oscap_action *action);
 static int app_generate_fix(const struct oscap_action *action);
 static int app_generate_guide(const struct oscap_action *action);
+static int app_xccdf_merge_results(const struct oscap_action *action);
 
-#define XCCDF_SUBMODULES_NUM		7
+#define XCCDF_SUBMODULES_NUM		8
 #define XCCDF_GEN_SUBMODULES_NUM	5 /* See actual arrays
 						initialization below. */
 static struct oscap_module* XCCDF_SUBMODULES[XCCDF_SUBMODULES_NUM];
@@ -235,6 +237,21 @@ static struct oscap_module XCCDF_REMEDIATE = {
 	.func = app_xccdf_remediate
 };
 
+static struct oscap_module XCCDF_MERGE_RESULTS = {
+	.name =		"merge-results",
+	.parent =	&OSCAP_XCCDF_MODULE,
+	.summary =	"Merge XCCDF results collected from multiple hosts or scans",
+	.usage =	"[options] INPUT_FILE [INPUT_FILE ...]",
+	.help =		"INPUT_FILE - XCCDF TestResult file, XCCDF Benchmark with TestResults or ARF\n\n"
+		"Options:\n"
+		"   --output <file>               - Write the merged results into file (required).\n"
+		"   --verbose <verbosity_level>   - Turn on verbose mode at specified verbosity level.\n"
+		"                                   Verbosity level must be one of: DEVEL, INFO, WARNING, ERROR.\n"
+		"   --verbose-log-file <file>     - Write verbose information into file.\n",
+	.opt_parser = getopt_xccdf,
+	.func = app_xccdf_merge_results
+};
+
 #define GEN_OPTS \
         "Generate options:\n" \
 	"   --profile <profile-id>        - Apply profile with given ID to the Benchmark before further processing takes place.\n"
@@ -358,6 +375,7 @@ static struct oscap_module* XCCDF_SUBMODULES[XCCDF_SUBMODULES_NUM] = {
     &XCCDF_EXPORT_OVAL_VARIABLES,
     &XCCDF_GENERATE,
 	&XCCDF_REMEDIATE,
+	&XCCDF_MERGE_RESULTS,
     NULL
 };
 
@@ -1062,6 +1080,72 @@ static bool _some_result_exists(struct oscap_source *xccdf_source, const char *n
 	return result;
 }
 
+
+static int app_xccdf_merge_results(const struct oscap_action *action)
+{
+	if (action->f_results == NULL) {
+		oscap_module_usage(action->module, stderr,
+			"No output file specified. Use --output <file>.\n");
+		return OSCAP_BADARGS;
+	}
+	if (action->merge_inputs == NULL || action->merge_input_count < 1) {
+		oscap_module_usage(action->module, stderr, "No input file specified.\n");
+		return OSCAP_BADARGS;
+	}
+
+	struct xccdf_result_merger *merger = xccdf_result_merger_new();
+	if (merger == NULL) {
+		oscap_print_error();
+		return OSCAP_ERROR;
+	}
+
+	int result = OSCAP_ERROR;
+	for (int i = 0; i < action->merge_input_count; ++i) {
+		const char *input = action->merge_inputs[i];
+		if (xccdf_result_merger_add_file(merger, input) != 0) {
+			/* A single unreadable input must not abort the whole batch: the
+			 * remaining inputs are still merged.  The failure is reported on
+			 * stderr. */
+			const char *error = oscap_err_desc();
+			fprintf(stderr, "WARNING: Skipping unreadable input '%s': %s\n",
+				input, error != NULL ? error : "(no error description)");
+			oscap_clearerr();
+			continue;
+		}
+	}
+
+	if (xccdf_result_merger_get_record_count(merger) == 0) {
+		fprintf(stderr, "No usable TestResult found in the given inputs.\n");
+		oscap_print_error();
+		goto cleanup;
+	}
+
+	if (xccdf_result_merger_export(merger, action->f_results) != 0) {
+		oscap_print_error();
+		goto cleanup;
+	}
+
+	/* Report the merge summary so that conflicts and skipped records are
+	 * not silent. */
+	printf("Merged %zu result records into %zu host(s).\n",
+		xccdf_result_merger_get_record_count(merger),
+		xccdf_result_merger_get_host_count(merger));
+	if (xccdf_result_merger_get_unknown_host_count(merger) > 0)
+		printf("Unknown host records: %zu\n", xccdf_result_merger_get_unknown_host_count(merger));
+	if (xccdf_result_merger_get_conflict_count(merger) > 0)
+		printf("Identity conflicts split into separate hosts: %zu\n",
+			xccdf_result_merger_get_conflict_count(merger));
+	if (xccdf_result_merger_get_skipped_count(merger) > 0)
+		printf("Skipped records: %zu\n", xccdf_result_merger_get_skipped_count(merger));
+
+	result = OSCAP_OK;
+
+cleanup:
+	xccdf_result_merger_free(merger);
+	oscap_print_error();
+	return result;
+}
+
 int app_generate_fix(const struct oscap_action *action)
 {
 	struct xccdf_session *session = NULL;
@@ -1457,6 +1541,17 @@ bool getopt_xccdf(int argc, char **argv, struct oscap_action *action)
                 } else {
                     action->f_ovals = NULL;
                 }
+	} else if (action->module == &XCCDF_MERGE_RESULTS) {
+		if (optind >= argc)
+			return oscap_module_usage(action->module, stderr, "At least one input file needs to be specified!");
+		action->merge_input_count = argc - optind;
+		action->merge_inputs = calloc((action->merge_input_count + 1), sizeof(char *));
+		if (action->merge_inputs == NULL)
+			return oscap_module_usage(action->module, stderr, "Out of memory.");
+		for (int i = 0; i < action->merge_input_count; ++i)
+			action->merge_inputs[i] = argv[optind + i];
+		action->merge_inputs[action->merge_input_count] = NULL;
+		action->f_xccdf = action->merge_inputs[0];
 	} else if (action->module == &XCCDF_GEN_CUSTOM) {
 		if (!action->stylesheet) {
 			return oscap_module_usage(action->module, stderr, "XSLT Stylesheet needs to be specified!");

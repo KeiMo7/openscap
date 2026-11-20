@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestResult xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_org.open-scap_testresult_stable1" end-time="2026-11-19T10:00:00+00:00">
+  <target>legacy-name</target>
+  <target-facts>
+    <fact name="urn:xccdf:fact:asset:identifier:ein" type="string">machine-7f3a</fact>
+    <fact name="urn:xccdf:fact:asset:identifier:host_name" type="string">legacy-name</fact>
+  </target-facts>
+  <rule-result idref="xccdf_com.example_rule_one" time="2026-11-19T10:00:00+00:00" weight="1.0" severity="high"><result>pass</result></rule-result>
+</TestResult>
